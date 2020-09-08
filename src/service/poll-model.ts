@@ -4,6 +4,8 @@ export type PollUserId = string;
 export type PollResultId = string;
 export type PollChoice = 0 | 1 | 2 | 3;
 
+export const MAX_NUMBER_OF_OPTIONS: number = 4;
+
 export interface Poll {
   id: PollId;
   name: string;
@@ -17,11 +19,14 @@ export enum PollStatus {
   Closed = 'closed',
 }
 
-export interface PollQuestion {
-  id: PollQuestionId;
+export interface NewPollQuestion {
   text: string;
   multiChoice: boolean;
   options: string[];
+}
+
+export interface PollQuestion extends NewPollQuestion {
+  id: PollQuestionId;
 }
 
 export interface PollResult {
@@ -39,7 +44,7 @@ export interface PollUser {
 
 export interface PollService {
   newPoll(name: string): Poll;
-  addPollQuestion(id: PollId, questions: PollQuestion[]): Poll;
+  addPollQuestions(id: PollId, questions: NewPollQuestion[]): Poll;
   publishPoll(id: PollId): Poll;
   closePoll(id: PollId): Poll;
   getPoll(id: PollId): Poll;

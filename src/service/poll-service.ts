@@ -5,11 +5,12 @@ import {
   PollResult,
   PollUser,
   PollService,
-  PollQuestion,
+  NewPollQuestion,
   PollId,
   PollUserId,
   PollResultId,
   PollStatus,
+  MAX_NUMBER_OF_OPTIONS,
 } from './poll-model';
 
 interface PollState {
@@ -35,9 +36,31 @@ export class InMemoryPollService implements PollService {
     return poll;
   }
 
-  addPollQuestion(id: string, questions: PollQuestion[]): Poll {
-    throw new Error('Method not implemented.');
+  addPollQuestions(id: string, questions: NewPollQuestion[]): Poll {
+    // validate questions
+    questions.forEach((q) => {
+      if (q.options.length === 0) {
+        throw new Error('No option specified for question');
+      }
+      if (q.options.length > MAX_NUMBER_OF_OPTIONS) {
+        throw new Error('Too many options specified for question');
+      }
+    });
+    const poll = this.state.polls[id];
+    if (poll) {
+      poll.questions = [
+        ...poll.questions,
+        ...questions.map((q) => ({
+          ...q,
+          id: uuidv4(),
+        })),
+      ];
+      return poll;
+    } else {
+      throw new Error('Poll not found');
+    }
   }
+
   publishPoll(id: string): Poll {
     throw new Error('Method not implemented.');
   }
