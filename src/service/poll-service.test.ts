@@ -206,4 +206,115 @@ describe('poll service', () => {
     expect(secondUser?.firstName).toBe(secondUserName[0]);
     expect(secondUser?.lastName).toBe(secondUserName[1]);
   });
+
+  it('should be able to take a published poll', () => {
+    const poll = pollService.getPoll(firstPollId);
+    const result = pollService.takePoll(firstPollId, firstUserId, {
+      [poll.questions[0].id]: [0],
+      [poll.questions[1].id]: [1, 3],
+      [poll.questions[2].id]: [1],
+    });
+    expect(result.pollId).toBe(firstPollId);
+    expect(result.userId).toBe(firstUserId);
+    expect(Object.keys(result.answers).length).toBe(3);
+    expect(result.answers[poll.questions[0].id]).toStrictEqual([0]);
+    expect(result.answers[poll.questions[1].id]).toStrictEqual([1, 3]);
+    expect(result.answers[poll.questions[2].id]).toStrictEqual([1]);
+
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not be able to take a draft poll', () => {
+    expect(() => pollService.takePoll(secondPollId, firstUserId, {})).toThrow(
+      new RegExp('not currently published')
+    );
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not be able to take a non-existent poll', () => {
+    expect(() => pollService.takePoll(uuidv4(), firstUserId, {})).toThrow(
+      new RegExp('not found')
+    );
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not allow the same user to take the same poll again', () => {
+    const poll = pollService.getPoll(firstPollId);
+    expect(() =>
+      pollService.takePoll(firstPollId, firstUserId, {
+        [poll.questions[0].id]: [0],
+        [poll.questions[1].id]: [1, 3],
+        [poll.questions[2].id]: [1],
+      })
+    ).toThrow(new RegExp('already taken'));
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not allow the answers to non-existent question', () => {
+    const poll = pollService.getPoll(firstPollId);
+    expect(() =>
+      pollService.takePoll(firstPollId, secondUserId, {
+        [poll.questions[0].id]: [0],
+        [poll.questions[1].id]: [1, 3],
+        [poll.questions[2].id]: [1],
+        doNotExist: [0],
+      })
+    ).toThrow(new RegExp('not in the poll'));
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not allow the more than one choice for a single choice question', () => {
+    const poll = pollService.getPoll(firstPollId);
+    expect(() =>
+      pollService.takePoll(firstPollId, secondUserId, {
+        [poll.questions[0].id]: [0, 1],
+        [poll.questions[1].id]: [1, 3],
+        [poll.questions[2].id]: [1],
+      })
+    ).toThrow(new RegExp('not multi-choice'));
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not allow the answers outside the options range of the question', () => {
+    const poll = pollService.getPoll(firstPollId);
+    expect(() =>
+      pollService.takePoll(firstPollId, secondUserId, {
+        [poll.questions[0].id]: [3],
+        [poll.questions[1].id]: [1, 3],
+        [poll.questions[2].id]: [1],
+      })
+    ).toThrow(new RegExp('outside options range'));
+    expect(pollService.listPollResults(firstPollId).length).toBe(1);
+  });
+
+  it('should not allow the result to be modified', () => {
+    const poll = pollService.getPoll(firstPollId);
+    const resultsDirty = pollService.listPollResults(firstPollId);
+    // changing existing result
+    resultsDirty[0].userId = secondUserId;
+    resultsDirty[0].answers[poll.questions[0].id] = [1];
+    resultsDirty[0].answers[poll.questions[1].id].push(2);
+    resultsDirty[0].answers['badquestion'] = [0];
+    // adding new result
+    resultsDirty.push({
+      id: '123',
+      pollId: firstPollId,
+      userId: secondUserId,
+      answers: {
+        [poll.questions[0].id]: [3],
+        [poll.questions[1].id]: [1, 3],
+        [poll.questions[2].id]: [1],
+      },
+    });
+
+    const results = pollService.listPollResults(firstPollId);
+    expect(results.length).toBe(1);
+    const result = results[0];
+    expect(result.pollId).toBe(firstPollId);
+    expect(result.userId).toBe(firstUserId);
+    expect(Object.keys(result.answers).length).toBe(3);
+    expect(result.answers[poll.questions[0].id]).toStrictEqual([0]);
+    expect(result.answers[poll.questions[1].id]).toStrictEqual([1, 3]);
+    expect(result.answers[poll.questions[2].id]).toStrictEqual([1]);
+  });
 });

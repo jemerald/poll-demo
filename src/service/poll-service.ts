@@ -11,6 +11,7 @@ import {
   PollResultId,
   PollStatus,
   MAX_NUMBER_OF_OPTIONS,
+  PollQuestionId,
 } from './poll-model';
 
 interface PollState {
@@ -36,6 +37,19 @@ function cloneUser(user: PollUser): PollUser {
   };
 }
 
+function clonePollResult(result: PollResult): PollResult {
+  return {
+    ...result,
+    answers: Object.keys(result.answers).reduce(
+      (acc, questionId) => ({
+        ...acc,
+        [questionId]: [...result.answers[questionId]],
+      }),
+      {}
+    ),
+  };
+}
+
 export class InMemoryPollService implements PollService {
   private state: PollState = { polls: {}, users: {}, results: {} };
 
@@ -53,7 +67,7 @@ export class InMemoryPollService implements PollService {
     return clonePoll(poll);
   }
 
-  addPollQuestions(id: string, questions: NewPollQuestion[]): Poll {
+  addPollQuestions(id: PollId, questions: NewPollQuestion[]): Poll {
     // validate questions
     questions.forEach((q) => {
       if (q.options.length === 0) {
@@ -78,7 +92,7 @@ export class InMemoryPollService implements PollService {
     }
   }
 
-  publishPoll(id: string): Poll {
+  publishPoll(id: PollId): Poll {
     const poll = this.state.polls[id];
     if (!poll) {
       throw new Error('Poll not found');
@@ -99,11 +113,11 @@ export class InMemoryPollService implements PollService {
     return clonePoll(this.state.polls[id]);
   }
 
-  closePoll(id: string): Poll {
+  closePoll(id: PollId): Poll {
     throw new Error('Method not implemented.');
   }
 
-  getPoll(id: string): Poll {
+  getPoll(id: PollId): Poll {
     const poll = this.state.polls[id];
     if (poll) {
       return clonePoll(poll);
@@ -133,13 +147,58 @@ export class InMemoryPollService implements PollService {
   }
 
   takePoll(
-    pollId: string,
-    userId: string,
-    answers: Record<string, PollChoice>
+    pollId: PollId,
+    userId: PollUserId,
+    answers: Record<PollQuestionId, PollChoice[]>
   ): PollResult {
-    throw new Error('Method not implemented.');
+    if (!this.state.polls[pollId]) {
+      throw new Error('Poll not found');
+    }
+    const poll = this.state.polls[pollId];
+    if (poll.status !== PollStatus.Published) {
+      throw new Error('Poll is not currently published and cannot be taken');
+    }
+    if (
+      Object.values(this.state.results).filter(
+        (r) => r.pollId === pollId && r.userId === userId
+      ).length !== 0
+    ) {
+      throw new Error('User has already taken the poll');
+    }
+    Object.keys(answers).forEach((questionId) => {
+      const question = poll.questions.find((q) => q.id === questionId);
+      if (!question) {
+        throw new Error('Question not in the poll');
+      }
+      if (!question.multiChoice && answers[questionId].length > 1) {
+        throw new Error('Question is not multi-choice');
+      }
+      answers[questionId].forEach((choice) => {
+        if (choice >= question.options.length) {
+          throw new Error('Choice outside options range');
+        }
+      });
+    });
+    const result: PollResult = {
+      id: uuidv4(),
+      pollId,
+      userId,
+      answers: {
+        ...answers,
+      },
+    };
+    this.state.results = {
+      ...this.state.results,
+      [result.id]: result,
+    };
+    return clonePollResult(result);
   }
-  listPollResults(id: string): PollResult[] {
-    throw new Error('Method not implemented.');
+  listPollResults(id: PollId): PollResult[] {
+    if (!this.state.polls[id]) {
+      throw new Error('Poll not found');
+    }
+    return Object.values(this.state.results)
+      .filter((r) => r.pollId === id)
+      .map(clonePollResult);
   }
 }

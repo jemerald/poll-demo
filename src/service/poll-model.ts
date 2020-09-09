@@ -33,7 +33,7 @@ export interface PollResult {
   id: PollResultId;
   pollId: PollId;
   userId: PollUserId;
-  answers: Record<PollQuestionId, PollChoice>;
+  answers: Record<PollQuestionId, PollChoice[]>;
 }
 
 export interface PollUser {
@@ -56,7 +56,7 @@ export interface PollService {
   takePoll(
     pollId: PollId,
     userId: PollUserId,
-    answers: Record<PollQuestionId, PollChoice>
+    answers: Record<PollQuestionId, PollChoice[]>
   ): PollResult;
   listPollResults(id: PollId): PollResult[];
 }
