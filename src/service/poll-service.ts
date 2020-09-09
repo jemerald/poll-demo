@@ -68,6 +68,14 @@ export class InMemoryPollService implements PollService {
   }
 
   addPollQuestions(id: PollId, questions: NewPollQuestion[]): Poll {
+    const poll = this.state.polls[id];
+    // validate poll
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+    if (poll.status !== PollStatus.Draft) {
+      throw new Error('Poll not in draft status');
+    }
     // validate questions
     questions.forEach((q) => {
       if (q.options.length === 0) {
@@ -77,19 +85,14 @@ export class InMemoryPollService implements PollService {
         throw new Error('Too many options specified for question');
       }
     });
-    const poll = this.state.polls[id];
-    if (poll) {
-      poll.questions = [
-        ...poll.questions,
-        ...questions.map((q) => ({
-          ...q,
-          id: uuidv4(),
-        })),
-      ];
-      return clonePoll(poll);
-    } else {
-      throw new Error('Poll not found');
-    }
+    poll.questions = [
+      ...poll.questions,
+      ...questions.map((q) => ({
+        ...q,
+        id: uuidv4(),
+      })),
+    ];
+    return clonePoll(poll);
   }
 
   publishPoll(id: PollId): Poll {
@@ -114,7 +117,21 @@ export class InMemoryPollService implements PollService {
   }
 
   closePoll(id: PollId): Poll {
-    throw new Error('Method not implemented.');
+    const poll = this.state.polls[id];
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+    if (poll.status === PollStatus.Closed) {
+      throw new Error('Poll is already closed');
+    }
+    this.state.polls = {
+      ...this.state.polls,
+      [id]: {
+        ...poll,
+        status: PollStatus.Closed,
+      },
+    };
+    return clonePoll(this.state.polls[id]);
   }
 
   getPoll(id: PollId): Poll {

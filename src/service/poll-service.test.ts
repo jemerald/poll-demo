@@ -154,6 +154,18 @@ describe('poll service', () => {
     expect(() => pollService.publishPoll(secondPollId)).toThrow();
   });
 
+  it('should not be able to add question to a published poll', () => {
+    expect(() =>
+      pollService.addPollQuestions(firstPollId, [
+        {
+          text: 'question 4',
+          multiChoice: false,
+          options: ['q4 - option 1', 'q4 - option 2'],
+        },
+      ])
+    ).toThrow(new RegExp('not in draft'));
+  });
+
   it('should be able to add a user', () => {
     const user = pollService.addUser(firstUserName[0], firstUserName[1]);
     expect(user.firstName).toBe(firstUserName[0]);
@@ -316,5 +328,33 @@ describe('poll service', () => {
     expect(result.answers[poll.questions[0].id]).toStrictEqual([0]);
     expect(result.answers[poll.questions[1].id]).toStrictEqual([1, 3]);
     expect(result.answers[poll.questions[2].id]).toStrictEqual([1]);
+  });
+
+  it('should be able to close a draft poll', () => {
+    const poll = pollService.closePoll(secondPollId);
+    expect(poll.status).toBe(PollStatus.Closed);
+  });
+
+  it('should be able to close a published poll', () => {
+    const poll = pollService.closePoll(firstPollId);
+    expect(poll.status).toBe(PollStatus.Closed);
+  });
+
+  it('should not be able to close a closed poll', () => {
+    expect(() => pollService.closePoll(firstPollId)).toThrow(
+      new RegExp('already closed')
+    );
+  });
+
+  it('should not be able to add question to a closed poll', () => {
+    expect(() =>
+      pollService.addPollQuestions(firstPollId, [
+        {
+          text: 'question 4',
+          multiChoice: false,
+          options: ['q4 - option 1', 'q4 - option 2'],
+        },
+      ])
+    ).toThrow(new RegExp('not in draft'));
   });
 });
