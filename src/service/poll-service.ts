@@ -30,6 +30,12 @@ function clonePoll(poll: Poll): Poll {
   };
 }
 
+function cloneUser(user: PollUser): PollUser {
+  return {
+    ...user,
+  };
+}
+
 export class InMemoryPollService implements PollService {
   private state: PollState = { polls: {}, users: {}, results: {} };
 
@@ -111,11 +117,21 @@ export class InMemoryPollService implements PollService {
   }
 
   addUser(firstName: string, lastName: string): PollUser {
-    throw new Error('Method not implemented.');
+    const user: PollUser = {
+      id: uuidv4(),
+      firstName,
+      lastName,
+    };
+    this.state.users = {
+      ...this.state.users,
+      [user.id]: user,
+    };
+    return cloneUser(user);
   }
   listUsers(): PollUser[] {
-    throw new Error('Method not implemented.');
+    return Object.values(this.state.users).map(cloneUser);
   }
+
   takePoll(
     pollId: string,
     userId: string,

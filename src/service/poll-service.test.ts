@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { InMemoryPollService } from './poll-service';
-import { PollId, PollStatus, NewPollQuestion } from './poll-model';
+import { PollId, PollStatus, NewPollQuestion, PollUserId } from './poll-model';
 
 describe('poll service', () => {
   const pollService = new InMemoryPollService();
@@ -8,6 +8,10 @@ describe('poll service', () => {
   const secondPollName = 'my second poll';
   let firstPollId: PollId;
   let secondPollId: PollId;
+  const firstUserName = ['John', 'Doe'];
+  let firstUserId: PollUserId;
+  const secondUserName = ['Jane', 'Smith'];
+  let secondUserId: PollUserId;
 
   it('should start with empty poll list', () => {
     expect(pollService.listPolls().length).toBe(0);
@@ -148,5 +152,58 @@ describe('poll service', () => {
 
   it('should not be able to publish a draft poll without any questions', () => {
     expect(() => pollService.publishPoll(secondPollId)).toThrow();
+  });
+
+  it('should be able to add a user', () => {
+    const user = pollService.addUser(firstUserName[0], firstUserName[1]);
+    expect(user.firstName).toBe(firstUserName[0]);
+    expect(user.lastName).toBe(firstUserName[1]);
+    firstUserId = user.id;
+  });
+
+  it('should be able to add a second user', () => {
+    const user = pollService.addUser(secondUserName[0], secondUserName[1]);
+    expect(user.firstName).toBe(secondUserName[0]);
+    expect(user.lastName).toBe(secondUserName[1]);
+    secondUserId = user.id;
+  });
+
+  it('should be able to retrieve all users', () => {
+    const users = pollService.listUsers();
+    expect(users.length).toBe(2);
+
+    const firstUser = users.find((x) => x.id === firstUserId);
+    expect(firstUser).toBeDefined();
+    expect(firstUser?.firstName).toBe(firstUserName[0]);
+    expect(firstUser?.lastName).toBe(firstUserName[1]);
+
+    const secondUser = users.find((x) => x.id === secondUserId);
+    expect(secondUser).toBeDefined();
+    expect(secondUser?.firstName).toBe(secondUserName[0]);
+    expect(secondUser?.lastName).toBe(secondUserName[1]);
+  });
+
+  it('should not allow user data change outside service API', () => {
+    const usersDirty = pollService.listUsers();
+    usersDirty[0].firstName = 'new firstname';
+    usersDirty[0].lastName = 'new lastname';
+    usersDirty.push({
+      id: '123',
+      firstName: 'foo',
+      lastName: 'bar',
+    });
+
+    const users = pollService.listUsers();
+    expect(users.length).toBe(2);
+
+    const firstUser = users.find((x) => x.id === firstUserId);
+    expect(firstUser).toBeDefined();
+    expect(firstUser?.firstName).toBe(firstUserName[0]);
+    expect(firstUser?.lastName).toBe(firstUserName[1]);
+
+    const secondUser = users.find((x) => x.id === secondUserId);
+    expect(secondUser).toBeDefined();
+    expect(secondUser?.firstName).toBe(secondUserName[0]);
+    expect(secondUser?.lastName).toBe(secondUserName[1]);
   });
 });
