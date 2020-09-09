@@ -116,4 +116,20 @@ describe('poll service', () => {
       ])
     ).toThrow();
   });
+
+  it('should only allow data change by service API', () => {
+    const pollDirty = pollService.getPoll(firstPollId);
+    pollDirty.name = 'new name';
+    pollDirty.status = PollStatus.Closed;
+    pollDirty.questions[0].text = 'new question';
+    pollDirty.questions[0].multiChoice = true;
+    pollDirty.questions[0].options[0] = 'new option';
+
+    const pollClean = pollService.getPoll(firstPollId);
+    expect(pollClean.name).toBe(firstPollName);
+    expect(pollClean.status).toBe(PollStatus.Draft);
+    expect(pollClean.questions[0].text).toBe('question 1');
+    expect(pollClean.questions[0].multiChoice).toBe(false);
+    expect(pollClean.questions[0].options[0]).toBe('q1 - option 1');
+  });
 });

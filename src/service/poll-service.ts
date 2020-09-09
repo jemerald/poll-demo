@@ -19,6 +19,17 @@ interface PollState {
   results: Record<PollResultId, PollResult>;
 }
 
+// clone objects before returning so any modification by the consumer would not impact the state
+function clonePoll(poll: Poll): Poll {
+  return {
+    ...poll,
+    questions: poll.questions.map((q) => ({
+      ...q,
+      options: q.options.map((o) => o),
+    })),
+  };
+}
+
 export class InMemoryPollService implements PollService {
   private state: PollState = { polls: {}, users: {}, results: {} };
 
@@ -33,7 +44,7 @@ export class InMemoryPollService implements PollService {
       ...this.state.polls,
       [poll.id]: poll,
     };
-    return poll;
+    return clonePoll(poll);
   }
 
   addPollQuestions(id: string, questions: NewPollQuestion[]): Poll {
@@ -55,7 +66,7 @@ export class InMemoryPollService implements PollService {
           id: uuidv4(),
         })),
       ];
-      return poll;
+      return clonePoll(poll);
     } else {
       throw new Error('Poll not found');
     }
@@ -71,14 +82,14 @@ export class InMemoryPollService implements PollService {
   getPoll(id: string): Poll {
     const poll = this.state.polls[id];
     if (poll) {
-      return poll;
+      return clonePoll(poll);
     } else {
       throw new Error('Poll not found');
     }
   }
 
   listPolls(): Poll[] {
-    return Object.values(this.state.polls);
+    return Object.values(this.state.polls).map(clonePoll);
   }
 
   addUser(firstName: string, lastName: string): PollUser {
