@@ -73,8 +73,26 @@ export class InMemoryPollService implements PollService {
   }
 
   publishPoll(id: string): Poll {
-    throw new Error('Method not implemented.');
+    const poll = this.state.polls[id];
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+    if (poll.status !== PollStatus.Draft) {
+      throw new Error('Poll is not in draft status, cannot be published');
+    }
+    if (poll.questions.length === 0) {
+      throw new Error('Poll has no questions, cannot be published');
+    }
+    this.state.polls = {
+      ...this.state.polls,
+      [id]: {
+        ...poll,
+        status: PollStatus.Published,
+      },
+    };
+    return clonePoll(this.state.polls[id]);
   }
+
   closePoll(id: string): Poll {
     throw new Error('Method not implemented.');
   }

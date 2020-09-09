@@ -132,4 +132,21 @@ describe('poll service', () => {
     expect(pollClean.questions[0].multiChoice).toBe(false);
     expect(pollClean.questions[0].options[0]).toBe('q1 - option 1');
   });
+
+  it('should be able to publish a draft poll', () => {
+    const poll = pollService.publishPoll(firstPollId);
+    expect(poll.status).toBe(PollStatus.Published);
+  });
+
+  it('should not be able to publish a non-existent poll', () => {
+    expect(() => pollService.publishPoll(uuidv4())).toThrow();
+  });
+
+  it('should not be able to re-publish a published poll', () => {
+    expect(() => pollService.publishPoll(firstPollId)).toThrow();
+  });
+
+  it('should not be able to publish a draft poll without any questions', () => {
+    expect(() => pollService.publishPoll(secondPollId)).toThrow();
+  });
 });
