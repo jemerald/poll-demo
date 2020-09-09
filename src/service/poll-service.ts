@@ -43,7 +43,7 @@ function clonePollResult(result: PollResult): PollResult {
     answers: Object.keys(result.answers).reduce(
       (acc, questionId) => ({
         ...acc,
-        [questionId]: [...result.answers[questionId]],
+        [questionId]: new Set<PollChoice>(result.answers[questionId].values()),
       }),
       {}
     ),
@@ -166,7 +166,7 @@ export class InMemoryPollService implements PollService {
   takePoll(
     pollId: PollId,
     userId: PollUserId,
-    answers: Record<PollQuestionId, PollChoice[]>
+    answers: Record<PollQuestionId, Set<PollChoice>>
   ): PollResult {
     if (!this.state.polls[pollId]) {
       throw new Error('Poll not found');
@@ -187,7 +187,7 @@ export class InMemoryPollService implements PollService {
       if (!question) {
         throw new Error('Question not in the poll');
       }
-      if (!question.multiChoice && answers[questionId].length > 1) {
+      if (!question.multiChoice && answers[questionId].size > 1) {
         throw new Error('Question is not multi-choice');
       }
       answers[questionId].forEach((choice) => {

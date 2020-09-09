@@ -1,6 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { InMemoryPollService } from './poll-service';
-import { PollId, PollStatus, NewPollQuestion, PollUserId } from './poll-model';
+import {
+  PollId,
+  PollStatus,
+  NewPollQuestion,
+  PollUserId,
+  PollChoice,
+} from './poll-model';
 
 describe('poll service', () => {
   const pollService = new InMemoryPollService();
@@ -222,16 +228,16 @@ describe('poll service', () => {
   it('should be able to take a published poll', () => {
     const poll = pollService.getPoll(firstPollId);
     const result = pollService.takePoll(firstPollId, firstUserId, {
-      [poll.questions[0].id]: [0],
-      [poll.questions[1].id]: [1, 3],
-      [poll.questions[2].id]: [1],
+      [poll.questions[0].id]: new Set<PollChoice>([0]),
+      [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+      [poll.questions[2].id]: new Set<PollChoice>([1]),
     });
     expect(result.pollId).toBe(firstPollId);
     expect(result.userId).toBe(firstUserId);
     expect(Object.keys(result.answers).length).toBe(3);
-    expect(result.answers[poll.questions[0].id]).toStrictEqual([0]);
-    expect(result.answers[poll.questions[1].id]).toStrictEqual([1, 3]);
-    expect(result.answers[poll.questions[2].id]).toStrictEqual([1]);
+    expect(result.answers[poll.questions[0].id]).toStrictEqual(new Set([0]));
+    expect(result.answers[poll.questions[1].id]).toStrictEqual(new Set([1, 3]));
+    expect(result.answers[poll.questions[2].id]).toStrictEqual(new Set([1]));
 
     expect(pollService.listPollResults(firstPollId).length).toBe(1);
   });
@@ -254,9 +260,9 @@ describe('poll service', () => {
     const poll = pollService.getPoll(firstPollId);
     expect(() =>
       pollService.takePoll(firstPollId, firstUserId, {
-        [poll.questions[0].id]: [0],
-        [poll.questions[1].id]: [1, 3],
-        [poll.questions[2].id]: [1],
+        [poll.questions[0].id]: new Set<PollChoice>([0]),
+        [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+        [poll.questions[2].id]: new Set<PollChoice>([1]),
       })
     ).toThrow(new RegExp('already taken'));
     expect(pollService.listPollResults(firstPollId).length).toBe(1);
@@ -266,10 +272,10 @@ describe('poll service', () => {
     const poll = pollService.getPoll(firstPollId);
     expect(() =>
       pollService.takePoll(firstPollId, secondUserId, {
-        [poll.questions[0].id]: [0],
-        [poll.questions[1].id]: [1, 3],
-        [poll.questions[2].id]: [1],
-        doNotExist: [0],
+        [poll.questions[0].id]: new Set<PollChoice>([0]),
+        [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+        [poll.questions[2].id]: new Set<PollChoice>([1]),
+        doNotExist: new Set<PollChoice>([0]),
       })
     ).toThrow(new RegExp('not in the poll'));
     expect(pollService.listPollResults(firstPollId).length).toBe(1);
@@ -279,9 +285,9 @@ describe('poll service', () => {
     const poll = pollService.getPoll(firstPollId);
     expect(() =>
       pollService.takePoll(firstPollId, secondUserId, {
-        [poll.questions[0].id]: [0, 1],
-        [poll.questions[1].id]: [1, 3],
-        [poll.questions[2].id]: [1],
+        [poll.questions[0].id]: new Set<PollChoice>([0, 1]),
+        [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+        [poll.questions[2].id]: new Set<PollChoice>([1]),
       })
     ).toThrow(new RegExp('not multi-choice'));
     expect(pollService.listPollResults(firstPollId).length).toBe(1);
@@ -291,9 +297,9 @@ describe('poll service', () => {
     const poll = pollService.getPoll(firstPollId);
     expect(() =>
       pollService.takePoll(firstPollId, secondUserId, {
-        [poll.questions[0].id]: [3],
-        [poll.questions[1].id]: [1, 3],
-        [poll.questions[2].id]: [1],
+        [poll.questions[0].id]: new Set<PollChoice>([3]),
+        [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+        [poll.questions[2].id]: new Set<PollChoice>([1]),
       })
     ).toThrow(new RegExp('outside options range'));
     expect(pollService.listPollResults(firstPollId).length).toBe(1);
@@ -304,18 +310,18 @@ describe('poll service', () => {
     const resultsDirty = pollService.listPollResults(firstPollId);
     // changing existing result
     resultsDirty[0].userId = secondUserId;
-    resultsDirty[0].answers[poll.questions[0].id] = [1];
-    resultsDirty[0].answers[poll.questions[1].id].push(2);
-    resultsDirty[0].answers['badquestion'] = [0];
+    resultsDirty[0].answers[poll.questions[0].id] = new Set<PollChoice>([1]);
+    resultsDirty[0].answers[poll.questions[1].id].add(2);
+    resultsDirty[0].answers['badquestion'] = new Set<PollChoice>([0]);
     // adding new result
     resultsDirty.push({
       id: '123',
       pollId: firstPollId,
       userId: secondUserId,
       answers: {
-        [poll.questions[0].id]: [3],
-        [poll.questions[1].id]: [1, 3],
-        [poll.questions[2].id]: [1],
+        [poll.questions[0].id]: new Set<PollChoice>([3]),
+        [poll.questions[1].id]: new Set<PollChoice>([1, 3]),
+        [poll.questions[2].id]: new Set<PollChoice>([1]),
       },
     });
 
@@ -325,9 +331,9 @@ describe('poll service', () => {
     expect(result.pollId).toBe(firstPollId);
     expect(result.userId).toBe(firstUserId);
     expect(Object.keys(result.answers).length).toBe(3);
-    expect(result.answers[poll.questions[0].id]).toStrictEqual([0]);
-    expect(result.answers[poll.questions[1].id]).toStrictEqual([1, 3]);
-    expect(result.answers[poll.questions[2].id]).toStrictEqual([1]);
+    expect(result.answers[poll.questions[0].id]).toStrictEqual(new Set([0]));
+    expect(result.answers[poll.questions[1].id]).toStrictEqual(new Set([1, 3]));
+    expect(result.answers[poll.questions[2].id]).toStrictEqual(new Set([1]));
   });
 
   it('should be able to close a draft poll', () => {
